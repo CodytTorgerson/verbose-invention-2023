@@ -1,1 +1,2 @@
-# verbose-invention-2023
+#  Repository for my advent of code 2023 code
+# Its GO time :)
