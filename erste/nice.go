@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
 func main() {
-	data, err := os.ReadFile("calibration.txt")
+	data, err := os.ReadFile("calb2.txt")
 	if err != nil {
 		fmt.Println("File reading error", err)
 		return
@@ -19,47 +20,35 @@ func main() {
 	lines := strings.Split(fileContent, "\n")
 	var score = 0
 	for _, line := range lines {
-		var combinedDigits = []string{digitCheckerForward(line), digitCheckerBackwards(line)}
-		var combinedDigitsString = strings.Join(combinedDigits, "")
-		var score2Add, err = strconv.Atoi(combinedDigitsString)
-		if err != nil {
-			fmt.Println("Error converting string to integer: ", err)
+		var combinedArray = append(digitFinder(line), numbersAsWordsFinder(line)...)
+		if len(combinedArray) == 0 {
 			continue
 		}
-		score += int(score2Add)
+		sort.Slice(combinedArray, func(i, j int) bool {
+			return combinedArray[i].index < combinedArray[j].index
+		})
+
+		var firstDigit = combinedArray[0].number
+		var secondDigit = combinedArray[len(combinedArray)-1].number
+		var finalNumberAsString = firstDigit + secondDigit
+		var finalNumber, _ = strconv.Atoi(finalNumberAsString)
+		score += finalNumber
 	}
 	fmt.Println("total score: ", score)
 }
 
-func digitCheckerForward(line string) string {
-	for _, char := range line {
+func digitFinder(line string) []extractedNumberAsString {
+	var listOfNumbers []extractedNumberAsString
+	for index, char := range line {
 		if unicode.IsDigit(char) {
-			return string(char)
+			listOfNumbers = append(listOfNumbers, extractedNumberAsString{index: index, number: string(char)})
 		}
 	}
-	return ""
+	return listOfNumbers
 }
 
-func digitCheckerBackwards(line string) string {
-	var reversedString = reverseString(line)
-
-	for _, char := range reversedString {
-		if unicode.IsDigit(char) {
-			return string(char)
-		}
-	}
-	return ""
-}
-
-func reverseString(line string) string {
-	rs := []rune(line)
-	for i, j := 0, len(rs)-1; i < j; i, j = i+1, j-1 {
-		rs[i], rs[j] = rs[j], rs[i]
-	}
-	return string(rs)
-}
-
-func numbersAsWordsChecker(line string) (int, bool) {
+func numbersAsWordsFinder(line string) []extractedNumberAsString {
+	var listOfNumbers []extractedNumberAsString
 	var numbersAsWords = map[string]int{
 		"one":   1,
 		"two":   2,
@@ -71,9 +60,24 @@ func numbersAsWordsChecker(line string) (int, bool) {
 		"eight": 8,
 		"nine":  9}
 	for key, value := range numbersAsWords {
-		if strings.Contains(line, key) {
-			return value, true
+		indexOfString := strings.Index(line, key)
+		if indexOfString != -1 {
+			listOfNumbers = append(listOfNumbers, extractedNumberAsString{index: indexOfString, number: strconv.Itoa(value)})
+		}
+
+	}
+	// this will find relevant duplicates
+	for key, value := range numbersAsWords {
+		indexOfString := strings.LastIndex(line, key)
+		if indexOfString != -1 {
+			listOfNumbers = append(listOfNumbers, extractedNumberAsString{index: indexOfString, number: strconv.Itoa(value)})
 		}
 	}
-	return -1, false
+
+	return listOfNumbers
+}
+
+type extractedNumberAsString struct {
+	index  int
+	number string
 }
